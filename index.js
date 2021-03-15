@@ -3,7 +3,7 @@ const zlib = require("zlib");
 const DOMParser = require("xmldom").DOMParser;
 const AMF = require("./amf.js");
 
-let bin = fs.readFileSync('./map3.png');
+let bin = fs.readFileSync('./testMaps/map.png');
 let offset = bin.length - 4;
 let signature = bin.readUInt32BE(offset);
 if(signature != 0x2e4b3344) {
@@ -13,26 +13,6 @@ if(signature != 0x2e4b3344) {
 if(!fs.existsSync("kubes")){
 	fs.mkdirSync("kubes");
 }
-
-
-
-function extractKubeImage(data) {
-	var buffer;
-	if(data instanceof Array) {
-		buffer = Buffer.alloc(data.length);
-		for (let j = 0; j < buffer.length; ++j) {
-			buffer[j] = data[j];
-		}
-	}else if(data instanceof ArrayBuffer) {
-		buffer = Buffer.alloc(data.byteLength);
-		var uintA = new Uint8Array(data);
-		for (let j = 0; j < buffer.length; ++j) {
-			buffer[j] = uintA[j];
-		}
-	}
-	return buffer;
-}
-
 
 offset -= 4;
 let dataLength = bin.readUInt32BE(offset);
@@ -47,16 +27,13 @@ try {
 
 // console.log(result);
 let version = rawData.readInt8(0);
-let mapData, hasCamPath=false;
+let mapData;
 offset = 1;
 switch(version) {
 	case 1:
 		mapData = rawData.slice(offset, offset + rawData.length);
 		break;
 	case 3:
-		hasCamPath = true;
-		// throw new Error("Unable to parse map due to camera path AMF Data i CAN'T FUCKIN PARSE IN NODE JS");
-		// break;
 	case 2:
 		let customKubesLength = rawData.readUIntBE(offset, 1);
 		offset += 1;
@@ -121,6 +98,7 @@ switch(version) {
 		offset += 4;
 		console.log("Camera orientation : ",cameraOrientation);
 		
+		//Parse camera paths
 		let src = rawData.slice(offset, rawData.length);
 		let aBuffer = new ArrayBuffer(src.length);
 		var view = new Uint8Array(aBuffer);
@@ -132,7 +110,7 @@ switch(version) {
 		offset += deserializer.pos;
 
 		let mapSizes = {}
-		//Sizes in jubes
+		//Sizes in kubes
 		mapSizes.x = rawData.readIntBE(offset,2);
 		offset += 2;
 		mapSizes.y = rawData.readIntBE(offset,2);
@@ -151,9 +129,27 @@ switch(version) {
 		//12,13,14
 		//15,16,17
 
-		let secondLayer = mapData.slice(32*32*1, 32*32*2);
-		let thirdLayer = mapData.slice(32*32*2, 32*32*3);
-
+		let secondLayer = mapData.slice(mapSizes.x*mapSizes.y*1, mapSizes.x*mapSizes.y*2);
+		let thirdLayer = mapData.slice(mapSizes.x*mapSizes.y*2, mapSizes.x*mapSizes.y*3);
+		
 		break;
 }
-console.log(version);
+
+
+
+function extractKubeImage(data) {
+	var buffer;
+	if(data instanceof Array) {
+		buffer = Buffer.alloc(data.length);
+		for (let j = 0; j < buffer.length; ++j) {
+			buffer[j] = data[j];
+		}
+	}else if(data instanceof ArrayBuffer) {
+		buffer = Buffer.alloc(data.byteLength);
+		var uintA = new Uint8Array(data);
+		for (let j = 0; j < buffer.length; ++j) {
+			buffer[j] = uintA[j];
+		}
+	}
+	return buffer;
+}
